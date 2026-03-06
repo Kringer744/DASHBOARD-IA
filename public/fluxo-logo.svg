@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" fill="none">
+  <defs>
+    <linearGradient id="fluxo-g" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0D5DA5"/>
+      <stop offset="50%" stop-color="#0099CC"/>
+      <stop offset="100%" stop-color="#00D4F5"/>
+    </linearGradient>
+  </defs>
+  <!-- Bracket / partial hex outline -->
+  <path d="M 62 8 L 24 8 L 8 24 L 8 76 L 24 92 L 62 92"
+        stroke="url(#fluxo-g)" stroke-width="11"
+        fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Lightning bolt -->
+  <path d="M 78 5 L 56 48 L 70 48 L 52 106 L 94 44 L 80 44 Z"
+        fill="url(#fluxo-g)"/>
+</svg>
