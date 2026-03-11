@@ -136,8 +136,11 @@ export async function atualizarEmpresa(id: number, dados: Record<string, unknown
 
 // --- UNIDADES ---
 export async function getUnidades(empresaId?: number, params?: QueryParams) {
-  const where = empresaId ? `(empresa_id,eq,${empresaId})` : undefined
-  return listar('unidades', { where, sort: 'ordem_exibicao', ...params })
+  const empresaWhere = empresaId ? `(empresa_id,eq,${empresaId})` : undefined
+  const where = empresaWhere && params?.where
+    ? `${empresaWhere}~and${params.where}`
+    : empresaWhere || params?.where
+  return listar('unidades', { ...params, where, sort: params?.sort || 'ordem_exibicao' })
 }
 
 export async function getUnidade(id: number) {
@@ -172,8 +175,11 @@ export async function atualizarPersonalidadeIA(id: number, dados: Record<string,
 
 // --- FAQ ---
 export async function getFAQs(empresaId?: number, params?: QueryParams) {
-  const where = empresaId ? `(empresa_id,eq,${empresaId})` : undefined
-  return listar('faq', { where, sort: '-prioridade', ...params })
+  const empresaWhere = empresaId ? `(empresa_id,eq,${empresaId})` : undefined
+  const where = empresaWhere && params?.where
+    ? `${empresaWhere}~and${params.where}`
+    : empresaWhere || params?.where
+  return listar('faq', { ...params, where, sort: params?.sort || '-prioridade' })
 }
 
 export async function criarFAQ(dados: Record<string, unknown>) {
@@ -190,8 +196,11 @@ export async function deletarFAQ(id: number) {
 
 // --- CONVERSAS ---
 export async function getConversas(empresaId?: number, params?: QueryParams) {
-  const where = empresaId ? `(empresa_id,eq,${empresaId})` : undefined
-  return listar('conversas', { where, sort: '-created_at', ...params })
+  const empresaWhere = empresaId ? `(empresa_id,eq,${empresaId})` : undefined
+  const where = empresaWhere && params?.where
+    ? `${empresaWhere}~and${params.where}`
+    : empresaWhere || params?.where
+  return listar('conversas', { ...params, where, sort: params?.sort || '-created_at' })
 }
 
 export async function getConversa(id: number) {
@@ -202,6 +211,17 @@ export async function getConversa(id: number) {
 export async function getMensagens(conversaId: number, params?: QueryParams) {
   const where = `(conversa_id,eq,${conversaId})`
   return listar('mensagens', { where, sort: 'created_at', limit: 100, ...params })
+}
+
+export async function deletarMensagensConversa(conversaId: number) {
+  const mensagens = await getMensagens(conversaId, { limit: 1000 })
+  if (mensagens.list.length === 0) return
+  const ids = (mensagens.list as Array<{ id: number }>).map(m => ({ Id: m.id }))
+  await api.delete(`/${TABLE_IDS.mensagens}`, { data: ids })
+}
+
+export async function atualizarConversa(id: number, dados: Record<string, unknown>) {
+  return atualizar('conversas', id, dados)
 }
 
 // --- FOLLOWUPS ---
@@ -288,12 +308,15 @@ export async function getPlanos(empresaId?: number, params?: QueryParams) {
 // ESTATÍSTICAS GERAIS (DASHBOARD)
 // =====================================================
 
-export async function getEstatisticasGerais() {
+export async function getEstatisticasGerais(empresaId?: number) {
+  const where = empresaId ? `(empresa_id,eq,${empresaId})` : undefined
+  const empresaWhere = empresaId ? `(id,eq,${empresaId})` : undefined
+
   const [empresasRes, conversasRes, mensagensRes, faqsRes] = await Promise.all([
-    listar('empresas', { limit: 1 }),
-    listar('conversas', { limit: 1 }),
-    listar('mensagens', { limit: 1 }),
-    listar('faq', { limit: 1 }),
+    listar('empresas', { limit: 1, where: empresaWhere }),
+    listar('conversas', { limit: 1, where }),
+    listar('mensagens', { limit: 1 }), // Mensagens não costuma ter empresa_id direto, mas sim via conversa_id em joins complexos. Para estatísticas simples, filtrar conversas já resolve o total de conversas.
+    listar('faq', { limit: 1, where }),
   ])
 
   return {

@@ -128,10 +128,31 @@ export default function IAPage() {
   }
 
   async function testar() {
-    if (!form.empresa_id) return
+    if (!form.empresa_id) {
+      setRespostaTeste('❌ Selecione uma empresa primeiro')
+      return
+    }
+    if (!msgTeste.trim()) {
+      setRespostaTeste('❌ Digite uma mensagem para testar')
+      return
+    }
     setTestando(true)
     setRespostaTeste(null)
     try {
+      // Salva a config antes de testar para que a IA use as configurações atuais
+      const dados = {
+        ...form,
+        empresa_id: parseInt(form.empresa_id),
+        temperatura: parseFloat(form.temperatura),
+        max_tokens: parseInt(form.max_tokens),
+        palavras_proibidas: form.palavras_proibidas
+          ? form.palavras_proibidas.split(',').map(s => s.trim()).filter(Boolean)
+          : [],
+      }
+      if (editando) {
+        await atualizarPersonalidadeIA(editando.id, dados)
+      }
+
       const resultado = await testarConfigIA(
         parseInt(form.empresa_id),
         msgTeste,
@@ -139,17 +160,26 @@ export default function IAPage() {
       )
       setRespostaTeste(resultado.sucesso
         ? `✅ ${resultado.resposta}`
-        : `❌ Erro: ${resultado.erro}`
+        : `❌ Erro: ${resultado.erro || 'A API de IA não retornou resposta. Verifique se o serviço está online.'}`
       )
-    } catch {
-      setRespostaTeste('❌ Erro ao conectar com a API de IA')
+    } catch (error) {
+      const err = error as { message?: string; response?: { status?: number } }
+      if (err.response?.status === 404) {
+        setRespostaTeste('❌ Endpoint de teste não encontrado na API de IA. Verifique a URL da API.')
+      } else if (err.response?.status === 500) {
+        setRespostaTeste('❌ Erro interno na API de IA. Tente novamente em alguns instantes.')
+      } else {
+        setRespostaTeste(`❌ Erro ao conectar com a API de IA: ${err.message || 'Serviço pode estar offline'}`)
+      }
     } finally {
       setTestando(false)
     }
   }
 
-  const getEmpresaNome = (id: number) =>
-    empresas.find(e => e.id === id)?.nome_fantasia || `Empresa #${id}`
+  const getEmpresaNome = (id: number) => {
+    const emp = empresas.find(e => e.id === id)
+    return emp?.nome_fantasia || emp?.nome || `Empresa #${id}`
+  }
 
   const modeloBadge = (modelo: string) => {
     const cores: Record<string, 'info' | 'success' | 'purple'> = { gemini: 'info', openai: 'success', auto: 'purple' }
@@ -302,6 +332,14 @@ export default function IAPage() {
                     { value: 'formal', label: 'Formal' },
                     { value: 'casual', label: 'Casual' },
                     { value: 'energico', label: 'Energético' },
+                    { value: 'empatico', label: 'Empático' },
+                    { value: 'tecnico', label: 'Técnico' },
+                    { value: 'humoristico', label: 'Humorístico' },
+                    { value: 'consultivo', label: 'Consultivo' },
+                    { value: 'motivacional', label: 'Motivacional' },
+                    { value: 'acolhedor', label: 'Acolhedor' },
+                    { value: 'direto', label: 'Direto e Objetivo' },
+                    { value: 'persuasivo', label: 'Persuasivo' },
                   ]}
                 />
               </FormField>

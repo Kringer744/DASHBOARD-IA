@@ -112,7 +112,10 @@ export default function FollowupsPage() {
     } catch (e) { console.error(e) }
   }
 
-  const getEmpresaNome = (id: number) => empresas.find(e => e.id === id)?.nome_fantasia || `Empresa #${id}`
+  const getEmpresaNome = (id: number) => {
+    const emp = empresas.find(e => e.id === id)
+    return emp?.nome_fantasia || emp?.nome || `Empresa #${id}`
+  }
 
   const statusIcon = (status: string) => {
     if (status === 'sent') return <CheckCircle className="w-4 h-4 text-accent-green" />

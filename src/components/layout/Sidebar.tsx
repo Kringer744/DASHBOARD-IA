@@ -20,6 +20,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
+import { LogOut } from 'lucide-react'
 
 const navItems = [
   {
@@ -63,6 +65,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { user, logout } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
 
   return (
@@ -128,21 +131,35 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-bg-border p-3">
+      <div className="border-t border-bg-border p-3 space-y-2">
         <div className={cn(
           'flex items-center gap-3 p-2 rounded-lg',
           collapsed && 'justify-center'
         )}>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-accent-blue flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-white">AD</span>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-accent-blue flex items-center justify-center flex-shrink-0 shadow-glow-sm">
+            <span className="text-xs font-bold text-white">
+              {user?.empresaNome ? user.empresaNome.substring(0, 2).toUpperCase() : 'AD'}
+            </span>
           </div>
           {!collapsed && (
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium text-white truncate">Admin</p>
-              <p className="text-xs text-gray-500 truncate">Super usuário</p>
+            <div className="overflow-hidden flex-1">
+              <p className="text-sm font-medium text-white truncate">{user?.empresaNome || 'Admin'}</p>
+              <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
             </div>
           )}
         </div>
+        
+        <button
+          onClick={logout}
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-accent-red hover:bg-accent-red/10 transition-colors text-sm font-medium',
+            collapsed && 'justify-center px-0'
+          )}
+          title={collapsed ? 'Sair' : undefined}
+        >
+          <LogOut className="w-[18px] h-[18px]" />
+          {!collapsed && <span>Sair do Sistema</span>}
+        </button>
       </div>
     </aside>
   )

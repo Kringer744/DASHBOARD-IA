@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import { StatusBadge, Badge } from '@/components/ui/Badge'
 import { PageLoading } from '@/components/ui/Loading'
-import { ArrowLeft, Bot, User, Clock, MessageSquare, Star, Phone, Mail } from 'lucide-react'
-import { getConversa, getMensagens } from '@/lib/nocodb'
+import { ArrowLeft, Bot, User, Clock, MessageSquare, Star, Phone, Mail, Trash2 } from 'lucide-react'
+import { getConversa, getMensagens, deletarMensagensConversa } from '@/lib/nocodb'
+import { ConfirmModal } from '@/components/ui/Modal'
 import type { Conversa, Mensagem } from '@/types'
 import { formatarData, formatarDataRelativa } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,8 @@ export default function ConversaDetalhe() {
   const [conversa, setConversa] = useState<Conversa | null>(null)
   const [mensagens, setMensagens] = useState<Mensagem[]>([])
   const [loading, setLoading] = useState(true)
+  const [confirmLimpar, setConfirmLimpar] = useState(false)
+  const [limpando, setLimpando] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -34,6 +37,20 @@ export default function ConversaDetalhe() {
     }
     load()
   }, [id])
+
+  async function limparHistorico() {
+    if (!id) return
+    setLimpando(true)
+    try {
+      await deletarMensagensConversa(parseInt(id as string))
+      setMensagens([])
+      setConfirmLimpar(false)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLimpando(false)
+    }
+  }
 
   if (loading) return <PageLoading text="Carregando conversa..." />
   if (!conversa) return (
@@ -59,9 +76,18 @@ export default function ConversaDetalhe() {
           <div className="card">
             <div className="px-5 py-4 border-b border-bg-border flex items-center gap-3">
               <MessageSquare className="w-4 h-4 text-brand-400" />
-              <h3 className="font-semibold text-white">
+              <h3 className="font-semibold text-white flex-1">
                 Mensagens ({mensagens.length})
               </h3>
+              {mensagens.length > 0 && (
+                <button
+                  onClick={() => setConfirmLimpar(true)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-accent-red hover:bg-accent-red/10 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Limpar Histórico
+                </button>
+              )}
             </div>
 
             <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
@@ -223,6 +249,16 @@ export default function ConversaDetalhe() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmLimpar}
+        onClose={() => setConfirmLimpar(false)}
+        onConfirm={limparHistorico}
+        title="Limpar Histórico"
+        message={`Tem certeza que deseja apagar todas as ${mensagens.length} mensagens desta conversa? Esta ação não pode ser desfeita.`}
+        confirmLabel="Limpar Tudo"
+        loading={limpando}
+      />
     </div>
   )
 }

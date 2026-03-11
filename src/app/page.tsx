@@ -22,6 +22,7 @@ import { getEstatisticasGerais, getEmpresas, getConversas } from '@/lib/nocodb'
 import type { Empresa, Conversa } from '@/types'
 import { formatarDataRelativa, truncarTexto, getIniciais, gerarCorAvatar } from '@/lib/utils'
 import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
 
 interface Stats {
   totalEmpresas: number
@@ -31,6 +32,7 @@ interface Stats {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth()
   const [stats, setStats] = useState<Stats | null>(null)
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [conversasRecentes, setConversasRecentes] = useState<Conversa[]>([])
@@ -38,11 +40,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
+      if (!user) return
+
       try {
         const [statsData, empresasData, conversasData] = await Promise.all([
-          getEstatisticasGerais(),
-          getEmpresas({ limit: 5 }),
-          getConversas(undefined, { limit: 5, sort: '-created_at' }),
+          getEstatisticasGerais(user.empresaId),
+          getEmpresas({ limit: 5, where: `(id,eq,${user.empresaId})` }),
+          getConversas(user.empresaId, { limit: 5, sort: '-created_at' }),
         ])
         setStats(statsData)
         setEmpresas(empresasData.list as Empresa[])
@@ -54,7 +58,7 @@ export default function DashboardPage() {
       }
     }
     load()
-  }, [])
+  }, [user])
 
   if (loading) return <PageLoading text="Carregando dashboard..." />
 

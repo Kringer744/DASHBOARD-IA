@@ -25,7 +25,7 @@ export default function PlanosPage() {
 
   const [form, setForm] = useState({
     empresa_id: '', nome: '', descricao: '', valor: '',
-    valor_promocional: '', link_venda: '',
+    valor_promocional: '', link_venda: '', diferenciais: '',
     ativo: true, ordem: '1',
   })
 
@@ -46,7 +46,7 @@ export default function PlanosPage() {
 
   function abrirNovo() {
     setEditando(null)
-    setForm({ empresa_id: empresas[0]?.id?.toString() || '', nome: '', descricao: '', valor: '', valor_promocional: '', link_venda: '', ativo: true, ordem: '1' })
+    setForm({ empresa_id: empresas[0]?.id?.toString() || '', nome: '', descricao: '', valor: '', valor_promocional: '', link_venda: '', diferenciais: '', ativo: true, ordem: '1' })
     setModalAberto(true)
   }
 
@@ -59,6 +59,7 @@ export default function PlanosPage() {
       valor: p.valor?.toString() || '',
       valor_promocional: p.valor_promocional?.toString() || '',
       link_venda: p.link_venda || '',
+      diferenciais: Array.isArray(p.diferenciais) ? p.diferenciais.join('\n') : '',
       ativo: p.ativo ?? true,
       ordem: p.ordem?.toString() || '1',
     })
@@ -73,6 +74,9 @@ export default function PlanosPage() {
         empresa_id: parseInt(form.empresa_id),
         valor: parseFloat(form.valor),
         valor_promocional: form.valor_promocional ? parseFloat(form.valor_promocional) : null,
+        diferenciais: form.diferenciais
+          ? form.diferenciais.split('\n').map(s => s.trim()).filter(Boolean)
+          : [],
         ordem: parseInt(form.ordem),
       }
       if (editando) await atualizar('planos', editando.id, dados)
@@ -90,7 +94,10 @@ export default function PlanosPage() {
     carregar()
   }
 
-  const getEmpresaNome = (id: number) => empresas.find(e => e.id === id)?.nome_fantasia || `Empresa #${id}`
+  const getEmpresaNome = (id: number) => {
+    const emp = empresas.find(e => e.id === id)
+    return emp?.nome_fantasia || emp?.nome || `Empresa #${id}`
+  }
 
   // Agrupar por empresa
   const planosPorEmpresa = planos.reduce<Record<number, { empresa: Empresa | undefined, planos: Plano[] }>>((acc, p) => {
@@ -179,7 +186,7 @@ export default function PlanosPage() {
                     {/* Diferenciais */}
                     {plano.diferenciais && Array.isArray(plano.diferenciais) && plano.diferenciais.length > 0 && (
                       <ul className="space-y-1 mb-4">
-                        {plano.diferenciais.slice(0, 4).map((d, i) => (
+                        {plano.diferenciais.map((d, i) => (
                           <li key={i} className="flex items-center gap-2 text-xs text-gray-300">
                             <Star className="w-3 h-3 text-accent-yellow flex-shrink-0" />
                             {d}
@@ -226,6 +233,9 @@ export default function PlanosPage() {
               <Input type="number" value={form.valor_promocional} onChange={e => setForm({ ...form, valor_promocional: e.target.value })} placeholder="79.90" />
             </FormField>
           </div>
+          <FormField label="Diferenciais" className="col-span-2">
+            <Textarea value={form.diferenciais} onChange={e => setForm({ ...form, diferenciais: e.target.value })} placeholder="Um diferencial por linha, ex:&#10;Acesso ilimitado&#10;Acompanhamento personalizado&#10;Suporte 24h" rows={4} />
+          </FormField>
           <FormField label="Link de Venda">
             <Input value={form.link_venda} onChange={e => setForm({ ...form, link_venda: e.target.value })} placeholder="https://..." />
           </FormField>

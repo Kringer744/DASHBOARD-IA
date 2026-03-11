@@ -30,10 +30,12 @@ export default function UnidadesPage() {
   const [salvando, setSalvando] = useState(false)
   const [deletando, setDeletando] = useState(false)
   const [expandido, setExpandido] = useState<number | null>(null)
+  const [erro, setErro] = useState('')
 
   const [form, setForm] = useState({
     empresa_id: '', nome: '', nome_abreviado: '', codigo: '',
     cidade: '', estado: 'SP', cep: '', endereco: '', numero: '',
+    bairro: '', pais: 'Brasil',
     telefone_principal: '', whatsapp: '', email_contato: '',
     instagram: '', facebook: '', site: '',
     link_matricula: '', link_agendamento: '',
@@ -64,6 +66,7 @@ export default function UnidadesPage() {
       empresa_id: empresaFiltro || empresas[0]?.id?.toString() || '',
       nome: '', nome_abreviado: '', codigo: '',
       cidade: '', estado: 'SP', cep: '', endereco: '', numero: '',
+      bairro: '', pais: 'Brasil',
       telefone_principal: '', whatsapp: '', email_contato: '',
       instagram: '', facebook: '', site: '',
       link_matricula: '', link_agendamento: '',
@@ -79,6 +82,7 @@ export default function UnidadesPage() {
       nome: u.nome || '', nome_abreviado: u.nome_abreviado || '',
       codigo: u.codigo || '', cidade: u.cidade || '', estado: u.estado || 'SP',
       cep: u.cep || '', endereco: u.endereco || '', numero: u.numero || '',
+      bairro: u.bairro || '', pais: u.pais || 'Brasil',
       telefone_principal: u.telefone_principal || '', whatsapp: u.whatsapp || '',
       email_contato: u.email_contato || '', instagram: u.instagram || '',
       facebook: u.facebook || '', site: u.site || '',
@@ -89,14 +93,66 @@ export default function UnidadesPage() {
   }
 
   async function salvar() {
+    setErro('')
+    // Validação
+    if (!form.empresa_id) {
+      setErro('Selecione uma empresa')
+      return
+    }
+    if (!form.nome.trim()) {
+      setErro('Informe o nome da unidade')
+      return
+    }
     setSalvando(true)
     try {
-      const dados = { ...form, empresa_id: parseInt(form.empresa_id), ordem_exibicao: parseInt(form.ordem_exibicao) }
-      if (editando) await atualizarUnidade(editando.id, dados)
-      else await criarUnidade(dados)
+      // Limpar campos vazios para evitar problemas
+      const dadosLimpos: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(form)) {
+        if (typeof value === 'string' && value.trim() === '' && key !== 'empresa_id' && key !== 'ordem_exibicao') {
+          continue
+        }
+        dadosLimpos[key] = value
+      }
+
+      // Gerar slug se não existir (para novas unidades)
+      if (!editando) {
+        dadosLimpos.slug = form.nome
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^\w\s-]/g, '')
+          .replace(/[\s_-]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      }
+
+      // Garantir campos complexos como objetos vazios se estiver criando
+      if (!editando) {
+        dadosLimpos.horarios = {}
+        dadosLimpos.infraestrutura = {}
+        dadosLimpos.servicos = {}
+        dadosLimpos.modalidades = []
+        dadosLimpos.planos = {}
+        dadosLimpos.formas_pagamento = []
+        dadosLimpos.convenios = []
+        dadosLimpos.palavras_chave = []
+        dadosLimpos.metadata = {}
+      }
+
+      dadosLimpos.empresa_id = parseInt(form.empresa_id)
+      dadosLimpos.ordem_exibicao = parseInt(form.ordem_exibicao) || 1
+      dadosLimpos.ativa = form.ativa
+      dadosLimpos.nome = form.nome.trim()
+
+      if (editando) await atualizarUnidade(editando.id, dadosLimpos)
+      else await criarUnidade(dadosLimpos)
       setModalAberto(false)
+      setErro('')
       carregar()
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+      const err = e as { response?: { data?: { msg?: string } }; message?: string }
+      setErro(err.response?.data?.msg || err.message || 'Erro ao salvar unidade. Tente novamente.')
+    }
     finally { setSalvando(false) }
   }
 
@@ -108,7 +164,10 @@ export default function UnidadesPage() {
     finally { setDeletando(false) }
   }
 
-  const getEmpresaNome = (id: number) => empresas.find(e => e.id === id)?.nome_fantasia || `Empresa #${id}`
+  const getEmpresaNome = (id: number) => {
+    const emp = empresas.find(e => e.id === id)
+    return emp?.nome_fantasia || emp?.nome || `Empresa #${id}`
+  }
 
   return (
     <div className="animate-fade">
@@ -224,6 +283,12 @@ export default function UnidadesPage() {
           <FormField label="CEP">
             <Input value={form.cep} onChange={(e) => setForm({ ...form, cep: e.target.value })} placeholder="01310-100" />
           </FormField>
+          <FormField label="Bairro">
+            <Input value={form.bairro} onChange={(e) => setForm({ ...form, bairro: e.target.value })} placeholder="Morumbi" />
+          </FormField>
+          <FormField label="País">
+            <Input value={form.pais} onChange={(e) => setForm({ ...form, pais: e.target.value })} placeholder="Brasil" />
+          </FormField>
           <FormField label="Telefone">
             <Input value={form.telefone_principal} onChange={(e) => setForm({ ...form, telefone_principal: e.target.value })} placeholder="(11) 99999-9999" />
           </FormField>
@@ -252,8 +317,13 @@ export default function UnidadesPage() {
             <Toggle checked={form.ativa} onChange={(v) => setForm({ ...form, ativa: v })} label="Unidade ativa" />
           </div>
         </div>
-        <div className="flex gap-3 justify-end mt-6">
-          <button onClick={() => setModalAberto(false)} className="btn-secondary">Cancelar</button>
+        {erro && (
+          <div className="col-span-2 bg-accent-red/10 border border-accent-red/20 rounded-lg p-3 mt-2">
+            <p className="text-sm text-accent-red">{erro}</p>
+          </div>
+        )}
+        <div className="flex gap-3 justify-end mt-6 col-span-2">
+          <button onClick={() => { setModalAberto(false); setErro('') }} className="btn-secondary">Cancelar</button>
           <button onClick={salvar} disabled={salvando} className="btn-primary">
             {salvando ? 'Salvando...' : editando ? 'Salvar' : 'Criar Unidade'}
           </button>

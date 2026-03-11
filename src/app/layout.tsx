@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import Sidebar from '@/components/layout/Sidebar'
+import { AuthProvider } from '@/context/AuthContext'
+import LayoutContent from '@/components/layout/LayoutContent'
 
 export const metadata: Metadata = {
   title: 'Dashboard IA - Multi-empresa',
@@ -15,12 +16,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark">
       <body className="bg-bg-primary text-white">
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto">
+        <AuthProvider>
+          <LayoutContent>
             {children}
-          </main>
-        </div>
+          </LayoutContent>
+        </AuthProvider>
       </body>
     </html>
   )

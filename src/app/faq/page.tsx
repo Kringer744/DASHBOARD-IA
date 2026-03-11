@@ -127,8 +127,10 @@ export default function FAQPage() {
     finally { setDeletando(false) }
   }
 
-  const getEmpresaNome = (id: number) =>
-    empresas.find(e => e.id === id)?.nome_fantasia || `Empresa #${id}`
+  const getEmpresaNome = (id: number) => {
+    const emp = empresas.find(e => e.id === id)
+    return emp?.nome_fantasia || emp?.nome || `Empresa #${id}`
+  }
 
   return (
     <div className="animate-fade">
