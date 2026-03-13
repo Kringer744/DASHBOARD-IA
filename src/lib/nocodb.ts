@@ -4,26 +4,31 @@ import axios from 'axios'
 // CONFIGURAÇÃO DA API NOCODB
 // =====================================================
 
-const BASE_URL = process.env.NEXT_PUBLIC_NOCODB_URL || 'https://desk-nocodb.5y4hfw.easypanel.host'
+let rawBaseUrl = process.env.NEXT_PUBLIC_NOCODB_URL || 'https://desk-nocodb.5y4hfw.easypanel.host'
+if (rawBaseUrl && !rawBaseUrl.startsWith('http')) {
+  rawBaseUrl = `https://${rawBaseUrl}`
+}
+const BASE_URL = rawBaseUrl.replace(/\/$/, '')
+
 const TOKEN = process.env.NEXT_PUBLIC_NOCODB_TOKEN || 'dfx-T6kTspesvooij0wJeYxQ7hBZmDe40RxYZiO8'
 const PROJECT_ID = process.env.NEXT_PUBLIC_NOCODB_PROJECT_ID || 'pslvd73baqrfuhp'
 
 // IDs das tabelas (coletados via API meta)
 export const TABLE_IDS = {
-  empresas: 'muajz8dygzqh90r',
-  unidades: 'mpbtbwxzppkjahg',
-  personalidade_ia: 'm1okfwmwh279if8',
-  faq: 'msn0c2ac9u5xmju',
-  conversas: 'm7vdzwixukr41xm',
-  mensagens: 'mgjtci39oqgn6i9',
-  followups: 'm57j5nsfr2fn22a',
-  templates_followup: 'm7wb42fx292c9qr',
-  eventos_funil: 'm19wn27q2a8vxu9',
-  metricas_diarias: 'mpwi72gu8jmgmwx',
-  logs_erro: 'ma8r7gy79tn6vrh',
-  cache_respostas: 'mjy1lxbb9w8bl6x',
-  integracoes: 'mcvonh8wkn671qs',
-  planos: 'm1wnomstilwbr50',
+  empresas: 'moi04r0iuccvhwc',
+  unidades: 'mpox9m5jgnks3n3',
+  personalidade_ia: 'mvfgubjkqbioo8s',
+  faq: 'mcjaj2lozjq4cnt',
+  conversas: 'm7s6ctxo8j5pxhh',
+  mensagens: 'mayw0d57bbah5sx',
+  followups: 'mnhe69176x21wpg',
+  templates_followup: 'mauo5wakvxdr8ie',
+  eventos_funil: 'm81q133roxtrr9b',
+  metricas_diarias: 'm0g5rxsn7jfn5ss',
+  logs_erro: 'm8o4j3rsj6bcho6',
+  cache_respostas: 'm1kubgrn92qtqss',
+  integracoes: 'miz8ntbjw5lxbhs',
+  planos: 'mgk8w5o8sgnnv3y',
 } as const
 
 export type TableName = keyof typeof TABLE_IDS
@@ -40,6 +45,33 @@ const api = axios.create({
   },
   timeout: 30000,
 })
+
+// =====================================================
+// AUXILIARES DE TRANSFORMAÇÃO
+// =====================================
+
+function parseIfNeeded(value: any) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        return JSON.parse(trimmed)
+      } catch (e) {
+        return value
+      }
+    }
+  }
+  return value
+}
+
+function transformItem<T>(item: any): T {
+  if (!item || typeof item !== 'object') return item as T
+  const newItem = { ...item }
+  for (const key in newItem) {
+    newItem[key] = parseIfNeeded(newItem[key])
+  }
+  return newItem as T
+}
 
 // =====================================================
 // INTERFACE DE CONSULTA
@@ -87,17 +119,22 @@ export async function listar<T>(
     },
   })
 
+  // Transformar itens se necessário (campos JSON que viraram texto)
+  if (response.data && response.data.list) {
+    response.data.list = response.data.list.map(item => transformItem<T>(item))
+  }
+
   return response.data
 }
 
 export async function buscarPorId<T>(tabela: TableName, id: number): Promise<T> {
   const response = await api.get<T>(`/${TABLE_IDS[tabela]}/${id}`)
-  return response.data
+  return transformItem<T>(response.data)
 }
 
 export async function criar<T>(tabela: TableName, dados: Partial<T>): Promise<T> {
   const response = await api.post<T>(`/${TABLE_IDS[tabela]}`, dados)
-  return response.data
+  return transformItem<T>(response.data)
 }
 
 export async function atualizar<T>(
@@ -106,7 +143,7 @@ export async function atualizar<T>(
   dados: Partial<T>
 ): Promise<T> {
   const response = await api.patch<T>(`/${TABLE_IDS[tabela]}/${id}`, dados)
-  return response.data
+  return transformItem<T>(response.data)
 }
 
 export async function deletar(tabela: TableName, id: number): Promise<void> {

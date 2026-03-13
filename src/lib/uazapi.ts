@@ -1,6 +1,10 @@
 import axios from 'axios'
 
-const BASE_URL = process.env.NEXT_PUBLIC_UAZAPI_URL?.replace(/\/$/, '')
+let rawBaseUrl = process.env.NEXT_PUBLIC_UAZAPI_URL || 'https://fluxodigitaltech.uazapi.com'
+if (rawBaseUrl && !rawBaseUrl.startsWith('http')) {
+  rawBaseUrl = `https://${rawBaseUrl}`
+}
+const BASE_URL = rawBaseUrl.replace(/\/$/, '')
 const ADMIN_TOKEN = process.env.NEXT_PUBLIC_UAZAPI_ADMIN_TOKEN
 
 const uazapi = axios.create({

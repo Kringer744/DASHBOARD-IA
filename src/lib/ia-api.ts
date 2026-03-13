@@ -4,7 +4,11 @@ import axios from 'axios'
 // API DO SERVIÇO DE IA
 // =====================================================
 
-const IA_URL = process.env.NEXT_PUBLIC_IA_API_URL || 'https://ia-33sy.onrender.com'
+let rawIaUrl = process.env.NEXT_PUBLIC_IA_API_URL || 'https://ia-33sy.onrender.com'
+if (rawIaUrl && !rawIaUrl.startsWith('http')) {
+  rawIaUrl = `https://${rawIaUrl}`
+}
+const IA_URL = rawIaUrl.replace(/\/$/, '')
 
 const iaApi = axios.create({
   baseURL: IA_URL,
